@@ -12,7 +12,8 @@ using namespace std;
 #define BUF_SIZE			1024
 #define OBJECT_NUM	2
 
-TCHAR szShareMemoryName[] = TEXT("Global\\MyFileMappingObject");    //指向同一块共享内存的名字
+TCHAR szShareMemorySWriteName[] = TEXT("Global\\MyFileMappingSWriteObject");    //指向服务端写共享内存的名字
+TCHAR szShareMemoryCWriteName[] = TEXT("Global\\MyFileMappingCWriteObject");    //指向客户端写共享内存的名字
 TCHAR szMutexName[] = TEXT("Global\\MyMutexObject");    //指向互斥量的名字
 TCHAR szSemaphoreReadCName[] = TEXT("Global\\MySemaphoreReadCObject");    //指向客户端读信号量的名字
 TCHAR szSemaphoreWriteCName[] = TEXT("Global\\MySemaphoreWriteCObject");    //指向客户端写信号量的名字
@@ -22,14 +23,16 @@ TCHAR szSemaphoreWriteSName[] = TEXT("Global\\MySemaphoreWriteSObject");    //指
 int _tmain(int argc, _TCHAR* argv[])
 {
 	//查询所有，根据szMutexName 打开互斥量 
-	HANDLE hMapFile = NULL;
+	HANDLE hMapFileSWrite = NULL;
+	HANDLE hMapFileCWrite = NULL;
 	HANDLE hMutex = NULL;
 	HANDLE hSemaphoreReadC = NULL;
 	HANDLE hSemaphoreWriteC = NULL;
 	HANDLE hSemaphoreReadS = NULL;
 	HANDLE hSemaphoreWriteS = NULL;
 	HANDLE handleObject[OBJECT_NUM];
-	LPCTSTR pBuf;
+	LPCTSTR pBufSWrite;
+	LPCTSTR pBufCWrite;
 	DWORD res = 0xFFFFEEEE;
 
 #pragma region Mutex
@@ -95,36 +98,58 @@ int _tmain(int argc, _TCHAR* argv[])
 		system("pause");
 		return 1;
 	}
-	//ReleaseSemaphore(hSemaphoreReadC, 1, NULL);  //信号量资源数加一
-	//ReleaseSemaphore(hSemaphoreWriteS, 1, NULL);  //信号量资源数加一
+	ReleaseSemaphore(hSemaphoreReadS, 1, NULL);  //服务端可读信号量资源数加一
+	ReleaseSemaphore(hSemaphoreWriteC, 1, NULL);  //客户端可写信号量资源数加一
 #pragma endregion Semphore
 
-	handleObject[0] = hSemaphoreReadC;
-	handleObject[1] = hSemaphoreWriteC;
+	handleObject[0] = hSemaphoreReadS;	//服务端可读信号
+	handleObject[1] = hSemaphoreWriteC;	//客户端可写信号
 
 #pragma region ShareMemory
 	//创建内存共享区域
-	hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, TRUE, szShareMemoryName); 
-	if (hMapFile == NULL)
+	hMapFileSWrite = OpenFileMapping(FILE_MAP_ALL_ACCESS, TRUE, szShareMemorySWriteName);
+	if (hMapFileSWrite == NULL)
 	{
 		_tprintf(TEXT("Could not create file mapping object (%d).\n"),
 			GetLastError());
 		system("pause");
 		return 1;
 	}
-
 	//将内存映射到该进程
-	pBuf = (LPTSTR)MapViewOfFile(hMapFile,   // handle to map object
+	pBufSWrite = (LPTSTR)MapViewOfFile(hMapFileSWrite,   // handle to map object
 		FILE_MAP_ALL_ACCESS, // read/write permission
 		0,
 		0,
 		BUF_SIZE);
-
-	if (pBuf == NULL)
+	if (pBufSWrite == NULL)
 	{
 		_tprintf(TEXT("Could not map view of file (%d).\n"),
 			GetLastError());
-		CloseHandle(hMapFile);
+		CloseHandle(hMapFileSWrite);
+		system("pause");
+		return 1;
+	}
+
+	//创建内存共享区域
+	hMapFileCWrite = OpenFileMapping(FILE_MAP_ALL_ACCESS, TRUE, szShareMemoryCWriteName);
+	if (hMapFileCWrite == NULL)
+	{
+		_tprintf(TEXT("Could not create file mapping object (%d).\n"),
+			GetLastError());
+		system("pause");
+		return 1;
+	}
+	//将内存映射到该进程
+	pBufCWrite = (LPTSTR)MapViewOfFile(hMapFileCWrite,   // handle to map object
+		FILE_MAP_ALL_ACCESS, // read/write permission
+		0,
+		0,
+		BUF_SIZE);
+	if (pBufCWrite == NULL)
+	{
+		_tprintf(TEXT("Could not map view of file (%d).\n"),
+			GetLastError());
+		CloseHandle(hMapFileCWrite);
 		system("pause");
 		return 1;
 	}
@@ -144,26 +169,26 @@ int _tmain(int argc, _TCHAR* argv[])
 		switch (res)
 		{
 		case WAIT_OBJECT_0:
-			//可读
-			memcpy(Transdata, (PVOID)pBuf, sizeof(float) * 5);
-			ReleaseSemaphore(hSemaphoreWriteS, 1, NULL);  //信号量资源数加一
+			//服务器可读
+			memcpy(Transdata, (PVOID)pBufSWrite, sizeof(float) * 5);
+			ReleaseSemaphore(hSemaphoreWriteS, 1, NULL);  //服务端可写信号量资源数加一
 			cout << "客户端读： " << Transdata[0] << endl;
 			break;
 		case (WAIT_OBJECT_0 + 1) :
-			//可写
-			memcpy((PVOID)pBuf, Transdata, sizeof(float) * 5);
-			ReleaseSemaphore(hSemaphoreReadS, 1, NULL);  //信号量资源数加一
+			//客户端可写
+			memcpy((PVOID)pBufCWrite, Transdata, sizeof(float) * 5);
+			ReleaseSemaphore(hSemaphoreReadC, 1, NULL);  //客户端可读信号量资源数加一
 			cout << "客户端写： " << Transdata[0] << endl;
 			for (int i = 0; i < 5; i++)
 			{
 				Transdata[i] += 1.0f;
 			}
+			//Sleep(350);
 			break;
 		default:
 			break;
 		}
 		if (Transdata[0] >= 100.0f) break;
-
 		Sleep(1000);
 	}
 	//一旦不再需要，注意一定要用 CloseHandle 关闭互斥体句柄。如对象的所有句柄都已关闭，那么对象也会删除
@@ -172,7 +197,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	CloseHandle(hSemaphoreWriteS); //销毁信号量
 	CloseHandle(hSemaphoreReadS); //销毁信号量
 	CloseHandle(hMutex);
-	CloseHandle(hMapFile);
+	CloseHandle(hMapFileSWrite);
+	CloseHandle(hMapFileCWrite);
 	delete[] Transdata;
 	Transdata = nullptr;
 
