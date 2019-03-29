@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SharedMemeryServer", "SharedMemeryServer\SharedMemeryServer.vcxproj", "{1A4B4D55-423F-4E7F-BA2A-6E29B5CDE1FC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SharedMemeryClient", "SharedMemeryClient\SharedMemeryClient.vcxproj", "{61332217-A4D3-495B-BA07-EF7E395B89BE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1A4B4D55-423F-4E7F-BA2A-6E29B5CDE1FC}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1A4B4D55-423F-4E7F-BA2A-6E29B5CDE1FC}.Debug|Win32.Build.0 = Debug|Win32
+		{1A4B4D55-423F-4E7F-BA2A-6E29B5CDE1FC}.Release|Win32.ActiveCfg = Release|Win32
+		{1A4B4D55-423F-4E7F-BA2A-6E29B5CDE1FC}.Release|Win32.Build.0 = Release|Win32
+		{61332217-A4D3-495B-BA07-EF7E395B89BE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{61332217-A4D3-495B-BA07-EF7E395B89BE}.Debug|Win32.Build.0 = Debug|Win32
+		{61332217-A4D3-495B-BA07-EF7E395B89BE}.Release|Win32.ActiveCfg = Release|Win32
+		{61332217-A4D3-495B-BA07-EF7E395B89BE}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
